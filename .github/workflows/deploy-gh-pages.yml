@@ -42,7 +42,7 @@ jobs:
           VUE_APP_GRAPHQL_TOKEN=${{ secrets.EMPTY_TOKEN }}
           EOF
           npm install
-          npx update-browserslist-db@latest
+          npx update-browserslist-db@latest --yes
           npm run now-build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
