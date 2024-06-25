@@ -1,0 +1,66 @@
+name: Deploy to GitHub pages
+
+# Controls when the workflow will run
+on:
+  push:
+    branches: [$default-branch]
+  workflow_dispatch:
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "gh-pages"
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  build:
+    name: Build site
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Read .nvmrc
+        id: read-nvm
+        shell: bash
+        run: echo "version=$(cat .nvmrc)" >> "$GITHUB_OUTPUT"
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.read-nvm.outputs.version }}
+      - name: Setup GH pages
+        id: pages
+        uses: actions/configure-pages@v5
+      - name: Build static files
+        shell: bash
+        run: |
+          cat << EOF > .env
+          VUE_APP_GRAPHQL_ENDPOINT=https://api.github.com/graphql
+          VUE_APP_GRAPHQL_TOKEN=${{ secrets.EMPTY_TOKEN }}
+          EOF
+          npm install
+          npx update-browserslist-db@latest
+          npm run now-build
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "public/"
+
+  deploy:
+    name: Deploy site
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+      # actions: read
+    environment:
+      name: github-pages
+      url: ${{steps.deployment.outputs.page_url}}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
